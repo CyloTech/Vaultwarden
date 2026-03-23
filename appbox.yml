@@ -1,0 +1,210 @@
+app:
+  display_name: "Vaultwarden"
+  publisher: "dani-garcia"
+  description: |
+    Vaultwarden is a lightweight, self-hosted password manager compatible with all official Bitwarden clients. Written in Rust, it provides a full-featured alternative to the official Bitwarden server that's ideal for self-hosted deployments.
+
+    ## Features
+
+    - Full Bitwarden client compatibility (browser extensions, mobile apps, desktop apps, CLI)
+    - Personal vault with unlimited passwords, notes, cards, and identities
+    - Organizations with collections, member roles, groups, and event logs
+    - Bitwarden Send for secure file and text sharing
+    - Two-factor authentication (TOTP, FIDO2 WebAuthn, YubiKey, Duo, email)
+    - Emergency access and admin password reset
+    - File attachments and website icon fetching
+    - Built-in admin panel for server management
+    - SQLite database — no external database required
+
+    ## Ideal For
+
+    - Users who want full control over their password vault
+    - Teams and families needing a shared, self-hosted password manager
+    - Anyone migrating from cloud-based Bitwarden to a self-hosted solution
+
+    ## Good to Know
+
+    - Your admin account is created automatically during installation. Public registration is disabled by default.
+    - The admin panel is accessible at `/admin` using the auto-generated token shown during installation.
+    - All official Bitwarden clients work with Vaultwarden — just point them to your instance URL.
+
+  short_description: "A lightweight, self-hosted Bitwarden-compatible password manager"
+  icon: icon.png
+  categories:
+    - "Privacy"
+  devsite: "https://github.com/dani-garcia/vaultwarden"
+  source_repo: "https://github.com/dani-garcia/vaultwarden"
+
+image:
+  name: "vaultwarden"
+  version: "1.35.4"
+  tag: "1.35.4"
+
+container:
+  memory: 1
+  memory_swap: 0
+  memory_reservation: 0
+  cpus: 0
+  init: false
+
+networking:
+  subdomain: "vaultwarden"
+  is_web_app: true
+  requires_domain: true
+  ssl: true
+  multiple_domains: false
+  tcp_passthrough: false
+
+behavior:
+  app_slots: 1
+  expect_callback: true
+  callback_requires_auth: false
+  can_update: true
+  allow_downgrade: false
+  ssl_restart: false
+
+install:
+  pre_description: "Set the email and master password for your Bitwarden account. An admin panel token is generated automatically. SMTP settings are optional — fill in the SMTP Host to enable email features (invitations, 2FA email, password hints)."
+  post_description: "Your Vaultwarden instance is ready! Log in with the email and master password you chose during installation. The admin panel is accessible at /admin using your generated token. Public registration is disabled by default."
+
+ports:
+  tcp:
+    range: null
+    dynamic: 0
+  udp:
+    range: null
+    dynamic: 0
+  combined:
+    range: null
+    dynamic: 0
+
+volumes:
+  - source: "data"
+    destination: "/data"
+    permissions: "rw"
+    uid: 1000
+
+shared_data: []
+
+env:
+  - key: DOMAIN
+    value: "https://%DOMAIN.DOMAIN%"
+    template_type: instance
+
+custom_fields:
+  USERNAME:
+    label: "Email Address"
+    type: email
+    width: 6
+    default_value: ""
+    template_type: none
+    validate:
+      - required
+      - email
+    params: {}
+
+  PASSWORD:
+    label: "Master Password"
+    type: complexPassword
+    width: 6
+    default_value: null
+    template_type: password
+    validate:
+      - required
+      - complexPassword
+    params: {}
+
+  ADMIN_TOKEN:
+    label: "Admin Panel Token"
+    type: generatedPassword
+    width: 12
+    default_value: "%RAND.48%"
+    template_type: password
+    validate: []
+    params: {}
+
+  SMTP_HOST:
+    label: "SMTP Host"
+    type: dynamicText
+    width: 6
+    default_value: ""
+    template_type: none
+    validate: []
+    params:
+      placeholder: "smtp.gmail.com"
+
+  SMTP_FROM:
+    label: "SMTP From Address"
+    type: dynamicText
+    width: 6
+    default_value: ""
+    template_type: none
+    validate: []
+    params:
+      placeholder: "vaultwarden@example.com"
+
+  SMTP_SECURITY:
+    label: "SMTP Security"
+    type: selector
+    width: 4
+    default_value: "starttls"
+    template_type: none
+    validate: []
+    params:
+      menuItems:
+        starttls: "STARTTLS (587)"
+        force_tls: "Force TLS (465)"
+        "off": "None (25)"
+
+  SMTP_PORT:
+    label: "SMTP Port"
+    type: dynamicText
+    width: 2
+    default_value: ""
+    template_type: none
+    validate: []
+    params:
+      placeholder: "587"
+
+  SMTP_USERNAME:
+    label: "SMTP Username"
+    type: dynamicText
+    width: 3
+    default_value: ""
+    template_type: none
+    validate: []
+    params:
+      placeholder: "user@example.com"
+
+  SMTP_PASSWORD:
+    label: "SMTP Password"
+    type: password
+    width: 3
+    default_value: ""
+    template_type: none
+    validate: []
+    params: {}
+
+  LOGIN_URL:
+    label: "Web Vault"
+    type: externalURL
+    width: 6
+    default_value: "https://%DOMAIN.DOMAIN%/"
+    template_type: instance
+    validate: []
+    params: {}
+
+  ADMIN_URL:
+    label: "Admin Panel"
+    type: externalURL
+    width: 6
+    default_value: "https://%DOMAIN.DOMAIN%/admin"
+    template_type: instance
+    validate: []
+    params: {}
+
+advanced:
+  devices: []
+  ulimits: []
+  sysctls: []
+  chains: []
