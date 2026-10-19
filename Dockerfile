@@ -7,7 +7,8 @@ RUN apt-get update && \
 ADD entrypoint.sh /entrypoint.sh
 ADD moduser.sh /moduser.sh
 ADD register_user.py /register_user.py
-RUN chmod +x /entrypoint.sh /moduser.sh /register_user.py
+ADD appbox-installed-callback /usr/local/bin/appbox-installed-callback
+RUN chmod +x /entrypoint.sh /moduser.sh /register_user.py && chmod 755 /usr/local/bin/appbox-installed-callback
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/vaultwarden"]

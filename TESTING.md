@@ -54,7 +54,7 @@ docker run --rm \
 - [ ] `register_user.py` creates the admin account successfully
 - [ ] `signups_allowed: false` is written to `/data/config.json`
 - [ ] Temporary Vaultwarden is stopped cleanly
-- [ ] API callback is attempted (will fail locally — expected)
+- [ ] API callback is attempted in the background (will fail locally — expected; Vaultwarden still starts)
 - [ ] Vaultwarden starts as the main process
 - [ ] Web vault is accessible at `http://localhost:8080`
 - [ ] Can log in with `admin@example.com` / `TestPass123!`

@@ -7,6 +7,8 @@ DATA_DB="/data/db.sqlite3"
 CONFIG_JSON="/data/config.json"
 APP_USER="1000:1000"
 LOCAL_URL="http://localhost:80"
+CALLBACK_PENDING_FLAG="/etc/appbox_callback_pending"
+CALLBACK_HELPER="/usr/local/bin/appbox-installed-callback"
 
 wait_for_http() {
     local url="$1"
@@ -38,25 +40,22 @@ create_admin_user() {
     return 1
 }
 
-callback_installed() {
-    if [[ "${SKIP_APPBOX_CALLBACK:-0}" == "1" ]]; then
-        echo "Skipping Appbox callback (SKIP_APPBOX_CALLBACK=1)"
-        return 0
+# Send the pending Appbox installed callback once Vaultwarden answers. This
+# runs in the background: the API accepts one installed callback per install
+# or update and rejects the rest (401 once the token has been used or cleared,
+# or when serverapi has already called back), so waiting for it in front of
+# `exec` kept Vaultwarden down forever. The helper retries network errors,
+# 408, 429 and 5xx, logs any other status once and stops. It runs as a
+# separate script, so `set -x` here never traces INSTANCE_ID or CALLBACK_TOKEN.
+send_pending_callback() {
+    set +e
+
+    if ! wait_for_http "${LOCAL_URL}/alive" 150 2; then
+        echo "WARNING: Vaultwarden did not answer; sending the installed callback anyway."
     fi
 
-    local callback_url="https://api.cylo.net/v1/apps/installed/${INSTANCE_ID}"
-    local headers=(
-        -H "Accept: application/json"
-        -H "Content-Type:application/json"
-    )
-
-    if [[ -n "${CALLBACK_TOKEN:-}" ]]; then
-        headers+=(-H "Authorization: Bearer ${CALLBACK_TOKEN}")
-    fi
-
-    until curl -fsS -o /dev/null "${headers[@]}" -X POST "${callback_url}"; do
-        sleep 5
-    done
+    "${CALLBACK_HELPER}"
+    rm -f "${CALLBACK_PENDING_FLAG}"
 }
 
 chown 1000:1000 "${DATA_DIR}"
@@ -94,6 +93,9 @@ else
 fi
 
 if [[ ! -f "${CONFIG_FLAG}" ]]; then
+    # Only mark the callback pending (before CONFIG_FLAG, so a crash during
+    # setup cannot lose it); it is sent in the background before `exec`.
+    touch "${CALLBACK_PENDING_FLAG}"
     touch "${CONFIG_FLAG}"
 
     if [[ ! -f "${DATA_DB}" ]]; then
@@ -125,8 +127,10 @@ if [[ ! -f "${CONFIG_FLAG}" ]]; then
     else
         echo "Upgrade detected: existing data found at ${DATA_DB}"
     fi
+fi
 
-    callback_installed
+if [[ -f "${CALLBACK_PENDING_FLAG}" ]]; then
+    send_pending_callback </dev/null &
 fi
 
 exec gosu "${APP_USER}" "$@"
