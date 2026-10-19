@@ -1,4 +1,4 @@
-FROM vaultwarden/server:1.35.4
+FROM vaultwarden/server:1.37.1
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gosu jq python3 && \
