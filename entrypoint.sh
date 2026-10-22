@@ -1,5 +1,6 @@
 #!/bin/bash
-set -x
+# No `set -x`: the trace wrote USERNAME, PASSWORD, ADMIN_TOKEN and the SMTP
+# password into the container log.
 
 CONFIG_FLAG="/etc/app_configured"
 DATA_DIR="/data"
@@ -45,8 +46,8 @@ create_admin_user() {
 # or update and rejects the rest (401 once the token has been used or cleared,
 # or when serverapi has already called back), so waiting for it in front of
 # `exec` kept Vaultwarden down forever. The helper retries network errors,
-# 408, 429 and 5xx, logs any other status once and stops. It runs as a
-# separate script, so `set -x` here never traces INSTANCE_ID or CALLBACK_TOKEN.
+# 408, 429 and 5xx, logs any other status once and stops. It never traces
+# INSTANCE_ID or CALLBACK_TOKEN.
 send_pending_callback() {
     set +e
 

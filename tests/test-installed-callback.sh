@@ -7,7 +7,7 @@
 #     callback token carried in INSTANCE_ID;
 #   - entrypoint.sh execs Vaultwarden straight away even when the API rejects
 #     the callback, sends a pending callback once in the background, clears
-#     the pending flag and keeps the callback token out of its `set -x` trace.
+#     the pending flag and keeps the callback token out of its output.
 #
 # Usage: tests/test-installed-callback.sh
 set -u
@@ -242,7 +242,7 @@ flag_order_check() {
 
 entrypoint="${repo_root}/entrypoint.sh"
 
-# Run a copy of entrypoint.sh (with its `set -x`) with the marker, data paths,
+# Run a copy of entrypoint.sh with the marker, data paths,
 # flag, helper and local URL pointed into the scratch directory, chown
 # disabled and gosu removed.
 #   state: upgrade (no /etc/app_configured, database present),
