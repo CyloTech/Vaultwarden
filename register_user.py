@@ -7,7 +7,11 @@ Replicates the client-side key derivation that Bitwarden clients perform:
   2. HKDF-Expand to stretch the master key into enc + mac keys
   3. AES-256-CBC (via openssl) to encrypt the generated symmetric key
   4. RSA 2048 keypair (via openssl) encrypted with the symmetric key
-  5. POST /api/accounts/register with the full payload
+  5. POST /identity/accounts/register/send-verification-email for a
+     registration token (returned directly while SIGNUPS_VERIFY is off)
+  6. POST /identity/accounts/register/finish with the token and the keys
+
+Vaultwarden 1.37.4 removed the single-step /identity/accounts/register.
 """
 
 import hashlib
@@ -94,6 +98,19 @@ def generate_rsa_keypair():
     return pub, priv
 
 
+def post_json(url, payload):
+    """POST JSON and return the decoded JSON response (None when empty)."""
+    req = Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urlopen(req) as resp:
+        body = resp.read().decode("utf-8")
+        return json.loads(body) if body else None
+
+
 def register(server_url, email, password, name="Admin"):
     email = email.lower().strip()
 
@@ -109,33 +126,37 @@ def register(server_url, email, password, name="Admin"):
     pub_der, priv_der = generate_rsa_keypair()
     enc_priv = bw_encrypt(priv_der, sym_key[:32], sym_key[32:])
 
-    payload = {
-        "name": name,
-        "email": email,
-        "masterPasswordHash": master_pw_hash,
-        "masterPasswordHint": "",
-        "key": protected_key,
-        "kdf": 0,
-        "kdfIterations": KDF_ITERATIONS,
-        "kdfMemory": None,
-        "kdfParallelism": None,
-        "keys": {
-            "publicKey": b64encode(pub_der).decode(),
-            "encryptedPrivateKey": enc_priv,
-        },
-    }
-
-    req = Request(
-        f"{server_url.rstrip('/')}/identity/accounts/register",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    identity_url = f"{server_url.rstrip('/')}/identity/accounts/register"
 
     try:
-        with urlopen(req) as resp:
-            print(f"User {email} registered successfully (HTTP {resp.status})")
-            return True
+        # The account name travels inside the token's claims.
+        token = post_json(f"{identity_url}/send-verification-email", {"email": email, "name": name})
+        if not isinstance(token, str) or not token:
+            print(
+                "Registration failed: no registration token was returned "
+                "(email verification for signups is enabled)",
+                file=sys.stderr,
+            )
+            return False
+
+        payload = {
+            "email": email,
+            "emailVerificationToken": token,
+            "masterPasswordHash": master_pw_hash,
+            "masterPasswordHint": "",
+            "key": protected_key,
+            "kdf": 0,
+            "kdfIterations": KDF_ITERATIONS,
+            "kdfMemory": None,
+            "kdfParallelism": None,
+            "keys": {
+                "publicKey": b64encode(pub_der).decode(),
+                "encryptedPrivateKey": enc_priv,
+            },
+        }
+        post_json(f"{identity_url}/finish", payload)
+        print(f"User {email} registered successfully")
+        return True
     except HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
         print(f"Registration failed (HTTP {e.code}): {body}", file=sys.stderr)

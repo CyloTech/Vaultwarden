@@ -278,6 +278,12 @@ Verify the Bitwarden key derivation produces a valid account.
 
 ---
 
+## Automated Checks
+
+`tests/release-gate.sh <image>` runs the static checks, `tests/test-installed-callback.sh` and `tests/smoke.sh`, then confirms the tag is not in the registry yet. The smoke test covers a fresh install (login with key decryption, closed registration, admin panel, no credentials in the log), a restart, and an update from the previous release on the same `/data`. Run `tests/smoke.sh <image> [<previous-image>]` to test an image without the registry check.
+
+---
+
 ## Quick Reference
 
 ```bash

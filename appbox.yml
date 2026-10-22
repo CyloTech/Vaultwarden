@@ -37,9 +37,8 @@ app:
 
 image:
   name: "vaultwarden"
-  version: "1.37.1"
-  tag: "1.37.1"
-  digest: "repo.cylo.net/vaultwarden@sha256:8104909d2791edf6e03689f6cef872f3d75a8095b63f1215ce691db3ffe65cb5"
+  version: "1.37.4"
+  tag: "1.37.4"
 
 container:
   memory: 1
